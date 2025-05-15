@@ -352,13 +352,27 @@ def actualizar_dashboard(auditor_seleccionado, proyecto_seleccionado, mostrar_ta
             paper_bgcolor='#A7A4DF'
         )
 
-    # ---------- FIGURA 4 ----------
+    # ——— FIGURA 4 ———
+    # 1) Limpia espacios invisibles por si acaso
+    datos_jime2["Auditor"] = datos_jime2["Auditor"].astype(str).str.strip()
+    
+    # 2) Filtra ceros para evitar segmentos vacíos
     df_jime_filtrado = datos_jime2.copy()
     if auditor_seleccionado:
-        df_jime_filtrado = df_jime_filtrado[
-            df_jime_filtrado["Auditor"] == auditor_seleccionado
-        ]
+        df_jime_filtrado = df_jime_filtrado[df_jime_filtrado["Auditor"] == auditor_seleccionado]
+    # quitar filas donde Horas == 0
+    df_jime_filtrado = df_jime_filtrado[df_jime_filtrado["Horas"] > 0]
     
+    # 3) Genera colores dinámicamente para **todos** los auditores presentes
+    import plotly.express as px
+    auditores_presentes = df_jime_filtrado["Auditor"].unique()
+    paleta = px.colors.qualitative.Plotly  # o la paleta que prefieras
+    color_map_dynamic = {
+        auditor: paleta[i % len(paleta)]
+        for i, auditor in enumerate(auditores_presentes)
+    }
+    
+    # 4) Crea la gráfica con el mapeo y el orden fijo
     fig4 = compacto(px.bar(
         df_jime_filtrado,
         x="Proyectos",
@@ -366,8 +380,8 @@ def actualizar_dashboard(auditor_seleccionado, proyecto_seleccionado, mostrar_ta
         color="Auditor",
         title="Horas por Proyecto y Auditor",
         barmode="stack",
-        # Aquí va el mapeo explícito
-        color_discrete_map=color_map
+        color_discrete_map=color_map_dynamic,
+        category_orders={"Auditor": list(auditores_presentes)}
     ))
     fig4.update_xaxes(tickvals=original1, ticktext=mapeo1)
     
