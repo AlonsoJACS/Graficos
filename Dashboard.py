@@ -7,6 +7,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import base64
+import numpy as np
 import os
 
 encoded_image = base64.b64encode(open(
@@ -45,8 +46,13 @@ datos_jime = pd.read_excel(
     "data/Datos.xlsx",
     engine="openpyxl"
 )
-datos_jime["Control de horas"] = datos_jime["Horas presupuestadas"] - datos_jime["Horas Incurridas"]
+
+datos_jime["Control de horas"] = np.where(
+    datos_jime["Horas presupuestadas"] != 0,
+    datos_jime["Horas presupuestadas"] - datos_jime["Horas Incurridas"],0)
 datos_jime["Horas presupuestadas restantes"] = datos_jime["Control de horas"].clip(lower=0)
+datos_jime["Horas exedentes"] = datos_jime["Control de horas"].clip(upper=0)
+datos_jime["Horas incurridas"] = datos_jime["Horas Incurridas"] + datos_jime["Horas exedentes"]
 
 # --- Datos para la tabla de presupuestos ---
 datos_tabla = pd.read_excel(
@@ -58,7 +64,10 @@ datos_tabla2 = (
     .dropna()
     .query("Integrante != 'Total'")
 )
-datos_tabla3 = datos_tabla[["Entidad", "Horas Presupuestas*"]].dropna()
+datos_tabla3 = datos_tabla[["Entidad", "Horas Presupuestas*",
+                            "Horas Incurridas en proyectos al 30 de agosto de 2024"]].dropna()
+
+datos_tabla4 = datos_tabla[["Integrante", "Horas disponibles para proyectos"]].dropna()
 
 # --- Datos para la gráfica 4 ---
 datos_jime2 = datos_jime.melt(
@@ -75,6 +84,33 @@ datos_jime2 = datos_jime.melt(
 )
 
 auditores_unicos = datos_fecha["Auditor"].unique()
+
+#Mapeos
+
+mapeo1= ["004-RT,RCS,ISC-QCR", "047-Fact,RT-QS", "048-Fact,Susc-QES", "049-Reas,RT-QES",
+         "067-IBNR,RRC-QIC", "072-Reaseg-QPE", "073-FAct,RT-QPE", "074-Ctar,RT,Msol,QPE",
+         "083-Siniestro-QS", "107-IBNR,RRC-QIC", "114-ARSI-QMX", "115-PSolDin-QMX",
+         "116-ARSI-QS", "117-PSolDin-QS", "137-RT-QCR", "139-Susc-QS", "148-Reaseg-QS"]
+
+mapeo2 = {"AI-24-004" : "004-RT,RCS,ISC-QCR", "AI-24-047" : "047-Fact,RT-QS", 
+          "AI-24-048" : "048-Fact,Susc-QES", "AI-24-049" : "049-Reas,RT-QES",
+         "AI-24-067" : "067-IBNR,RRC-QIC", "AI-24-072" : "072-Reaseg-QPE", 
+         "AI-24-073" : "073-FAct,RT-QPE", "AI-24-074" : "074-Ctar,RT,Msol,QPE",
+         "AI-24-083" : "083-Siniestro-QS", "AI-24-107" : "107-IBNR,RRC-QIC", 
+         "AI-24-114" : "114-ARSI-QMX", "AI-24-115" : "115-PSolDin-QMX",
+         "AI-24-116" : "116-ARSI-QS", "AI-24-117" : "117-PSolDin-QS", 
+         "AI-24-137" : "137-RT-QCR", "AI-24-139" : "139-Susc-QS", 
+         "AI-24-148" : "148-Reaseg-QS"}
+
+original1 = datos_jime["Proyectos"].tolist()
+
+opciones_personalizadas = [
+    {
+        "label": mapeo2.get(p, p),  # si no está en el dict, cae en el mismo p
+        "value": p
+    }
+    for p in datos_jime["Proyectos"].unique()
+]
 
 # --- Layout ---
 app.layout = html.Div([
@@ -104,7 +140,7 @@ app.layout = html.Div([
         html.Label("Filtrar por Proyecto:", style={'fontSize':'10px','color':'white','marginLeft':'30px'}),
         dcc.Dropdown(
             id="filtro-proyecto",
-            options=[{"label": p, "value": p} for p in datos_jime["Proyectos"].unique()],
+            options=opciones_personalizadas,
             placeholder="Selecciona un proyecto (opcional)",
             clearable=True,
             style={'width':'40%', 'fontSize':'10px', 'height':'25px'}
@@ -204,10 +240,12 @@ def actualizar_dashboard(auditor_seleccionado, proyecto_seleccionado, mostrar_ta
             df_inc.rename(columns={"Incurridas": "Horas"})[["Proyecto", "Horas"]],
             pd.DataFrame({"Proyecto": ["Disponible"], "Horas": [restantes]})
         ], ignore_index=True)
+        
+        df_pie["Proyecto_label"] = df_pie["Proyecto"].map(mapeo2).fillna("Disponible")
 
         fig1 = px.pie(
             df_pie,
-            names="Proyecto",
+            names="Proyecto_label",
             values="Horas",
             title="Horas presupuestadas e incurridas"
         )
@@ -223,16 +261,21 @@ def actualizar_dashboard(auditor_seleccionado, proyecto_seleccionado, mostrar_ta
         fig1 = px.bar(
             datos_jime,
             x="Proyectos",
-            y="Control de horas",
+            y=[
+            "Horas incurridas",
+            "Horas exedentes",
+            "Horas presupuestadas restantes"],
             title="Control de Horas por Proyecto",
-            color="Control de horas",
-            color_continuous_scale=["#941B80", "#0096AE"]
+            barmode = "stack",
+            color_discrete_sequence=["#F2BC73", "#D65D72", "#009877"]
         )
         fig1 = compacto(fig1)
         fig1.update_yaxes(
-            range=[datos_jime["Control de horas"].min()*1.1,
-                   datos_jime["Control de horas"].max()*1.1]
+            range=[datos_jime["Horas Incurridas"].min()*1.1,
+                   datos_jime["Horas Incurridas"].max()*1.1]
         )
+        fig1.update_xaxes(tickvals=original1,
+                          ticktext=mapeo1)
 
     # ---------- FIGURA 2 ----------
     resumen2 = df_filtrado.groupby(["Empresa", "Tipo de revisión"], as_index=False)["Horas"].sum()
@@ -313,6 +356,8 @@ def actualizar_dashboard(auditor_seleccionado, proyecto_seleccionado, mostrar_ta
         barmode="stack",
         color_discrete_sequence=["#522D6D", "#0091B3", "#702DB3", "#A7A4DF", "#F2BC73"]
     ))
+    fig4.update_xaxes(tickvals=original1,
+                      ticktext=mapeo1)
     
     # ——— PASTEL POR PROYECTO ———
     # valores por defecto: oculto el pastel y mantengo el grid
@@ -372,7 +417,7 @@ def actualizar_dashboard(auditor_seleccionado, proyecto_seleccionado, mostrar_ta
     # ---------- Tabla de datos ----------
     tabla_html = []
     if "mostrar" in mostrar_tablas:
-        datos_comb = pd.concat([datos_tabla2, datos_tabla3], axis=1)
+        datos_comb = pd.concat([datos_tabla4, datos_tabla3], axis=1)
         tabla_html = dash_table.DataTable(
             data=datos_comb.to_dict("records"),
             columns=[{"name": i, "id": i} for i in datos_comb.columns],
