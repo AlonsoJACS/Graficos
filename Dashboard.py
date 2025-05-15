@@ -354,22 +354,22 @@ def actualizar_dashboard(auditor_seleccionado, proyecto_seleccionado, mostrar_ta
 
     # ---------- FIGURA 4 ----------
     df_jime_filtrado = datos_jime2.copy()
-if auditor_seleccionado:
-    df_jime_filtrado = df_jime_filtrado[
-        df_jime_filtrado["Auditor"] == auditor_seleccionado
-    ]
-
-fig4 = compacto(px.bar(
-    df_jime_filtrado,
-    x="Proyectos",
-    y="Horas",
-    color="Auditor",
-    title="Horas por Proyecto y Auditor",
-    barmode="stack",
-    # Aquí va el mapeo explícito
-    color_discrete_map=color_map
-))
-fig4.update_xaxes(tickvals=original1, ticktext=mapeo1)
+    if auditor_seleccionado:
+        df_jime_filtrado = df_jime_filtrado[
+            df_jime_filtrado["Auditor"] == auditor_seleccionado
+        ]
+    
+    fig4 = compacto(px.bar(
+        df_jime_filtrado,
+        x="Proyectos",
+        y="Horas",
+        color="Auditor",
+        title="Horas por Proyecto y Auditor",
+        barmode="stack",
+        # Aquí va el mapeo explícito
+        color_discrete_map=color_map
+    ))
+    fig4.update_xaxes(tickvals=original1, ticktext=mapeo1)
     
     # ——— PASTEL POR PROYECTO ———
     # valores por defecto: oculto el pastel y mantengo el grid
