@@ -53,6 +53,7 @@ datos_jime["Control de horas"] = np.where(
 datos_jime["Horas presupuestadas restantes"] = datos_jime["Control de horas"].clip(lower=0)
 datos_jime["Horas exedentes"] = datos_jime["Control de horas"].clip(upper=0)
 datos_jime["Horas incurridas"] = datos_jime["Horas Incurridas"] + datos_jime["Horas exedentes"]
+datos_jime["Horas exedentes"] = abs(datos_jime["Horas exedentes"])
 
 # --- Datos para la tabla de presupuestos ---
 datos_tabla = pd.read_excel(
