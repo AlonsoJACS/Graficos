@@ -364,7 +364,6 @@ def actualizar_dashboard(auditor_seleccionado, proyecto_seleccionado, mostrar_ta
     df_jime_filtrado = df_jime_filtrado[df_jime_filtrado["Horas"] > 0]
     
     # 3) Genera colores dinámicamente para **todos** los auditores presentes
-    import plotly.express as px
     auditores_presentes = df_jime_filtrado["Auditor"].unique()
     paleta = px.colors.qualitative.Plotly  # o la paleta que prefieras
     color_map_dynamic = {
