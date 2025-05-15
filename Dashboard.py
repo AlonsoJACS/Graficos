@@ -112,6 +112,15 @@ opciones_personalizadas = [
     for p in datos_jime["Proyectos"].unique()
 ]
 
+color_map = {
+    "Carlos Alan Quiroz Herrera":        "#522D6D",
+    "Guadalupe Ivonne Peñaloza Macías":  "#0091B3",
+    "María Guadalupe Bravo Varela":      "#702DB3",
+    "Martha Jimena Portillo Gutiérrez":  "#A7A4DF",
+    # Para el caso de 'Horas presupuestadas restantes'
+    "Horas presupuestadas restantes":    "#F2BC73"
+}
+
 # --- Layout ---
 app.layout = html.Div([
     html.Div([
@@ -345,19 +354,22 @@ def actualizar_dashboard(auditor_seleccionado, proyecto_seleccionado, mostrar_ta
 
     # ---------- FIGURA 4 ----------
     df_jime_filtrado = datos_jime2.copy()
-    if auditor_seleccionado:
-        df_jime_filtrado = df_jime_filtrado[df_jime_filtrado["Auditor"] == auditor_seleccionado]
-    fig4 = compacto(px.bar(
-        df_jime_filtrado,
-        x="Proyectos",
-        y="Horas",
-        color="Auditor",
-        title="Horas por Proyecto y Auditor",
-        barmode="stack",
-        color_discrete_sequence=["#522D6D", "#0091B3", "#702DB3", "#A7A4DF", "#F2BC73"]
-    ))
-    fig4.update_xaxes(tickvals=original1,
-                      ticktext=mapeo1)
+if auditor_seleccionado:
+    df_jime_filtrado = df_jime_filtrado[
+        df_jime_filtrado["Auditor"] == auditor_seleccionado
+    ]
+
+fig4 = compacto(px.bar(
+    df_jime_filtrado,
+    x="Proyectos",
+    y="Horas",
+    color="Auditor",
+    title="Horas por Proyecto y Auditor",
+    barmode="stack",
+    # Aquí va el mapeo explícito
+    color_discrete_map=color_map
+))
+fig4.update_xaxes(tickvals=original1, ticktext=mapeo1)
     
     # ——— PASTEL POR PROYECTO ———
     # valores por defecto: oculto el pastel y mantengo el grid
